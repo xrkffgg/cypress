@@ -1,10 +1,10 @@
 /// <reference types="cypress" />
+import { DefineComponent, ComponentPublicInstance } from 'vue'
 import {
-  createLocalVue,
   mount as testUtilsMount,
-  VueTestUtilsConfigOptions,
-  Wrapper,
-} from '@vue/test-utils'
+  MountingOptions,
+  VueWrapper,
+} from '@vue/test-utils/dist/vue-test-utils.esm-bundler.js'
 
 const defaultOptions: (keyof MountOptions)[] = [
   'vue',
@@ -22,52 +22,32 @@ function checkMountModeEnabled () {
   }
 }
 
-const registerGlobalComponents = (Vue, options) => {
-  const globalComponents = Cypress._.get(options, 'extensions.components')
+const globalComponents = (options) => {
+  const components = Cypress._.get(options, 'extensions.components')
 
-  if (Cypress._.isPlainObject(globalComponents)) {
-    Cypress._.forEach(globalComponents, (component, id) => {
-      Vue.component(id, component)
-    })
+  if (!Cypress._.isPlainObject(components)) {
+    return {}
   }
+
+  return Cypress._.reduce(components, (result, value, key) => {
+    result[key] = value
+
+    return result
+  }, {})
 }
 
-const installFilters = (Vue, options) => {
-  const filters: VueFilters | undefined = Cypress._.get(
-    options,
-    'extensions.filters',
-  )
-
-  if (Cypress._.isPlainObject(filters)) {
-    Object.keys(filters).forEach((name) => {
-      Vue.filter(name, filters[name])
-    })
-  }
+const plugins = (options) => {
+  return Cypress._.get(options, 'extensions.use') ||
+  Cypress._.get(options, 'extensions.plugins') ||
+  []
 }
 
-const installPlugins = (Vue, options, props) => {
-  const plugins: VuePlugins =
-      Cypress._.get(props, 'plugins') ||
-      Cypress._.get(options, 'extensions.use') ||
-      Cypress._.get(options, 'extensions.plugins') ||
-      []
-
-  // @ts-ignore
-  plugins.forEach((p) => {
-    Array.isArray(p) ? Vue.use(...p) : Vue.use(p)
-  })
-}
-
-const installMixins = (Vue, options) => {
+const mixins = (options) => {
   const mixins =
     Cypress._.get(options, 'extensions.mixin') ||
     Cypress._.get(options, 'extensions.mixins')
 
-  if (Cypress._.isArray(mixins)) {
-    mixins.forEach((mixin) => {
-      Vue.mixin(mixin)
-    })
-  }
+  return Cypress._.isArray(mixins) ? mixins : []
 }
 
 // @ts-ignore
@@ -102,17 +82,6 @@ const resetStoreVM = (Vue, { store }) => {
 
   return store
 }
-
-/**
- * Type for component passed to "mount"
- *
- * @interface VueComponent
- * @example
- *  import Hello from './Hello.vue'
- *         ^^^^^ this type
- *  mount(Hello)
- */
-type VueComponent = Vue.ComponentOptions<any> | Vue.VueConstructor
 
 /**
  * Options to pass to the component when creating it, like
@@ -274,7 +243,7 @@ interface MountOptions {
 /**
  * Utility type for union of options passed to "mount(..., options)"
  */
-type MountOptionsArgument = Partial<ComponentOptions & MountOptions & VueTestUtilsConfigOptions>
+type MountOptionsArgument = Partial<ComponentOptions & MountOptions & MountingOptions<any, any>>
 
 // when we mount a Vue component, we add it to the global Cypress object
 // so here we extend the global Cypress namespace and its Cypress interface
@@ -293,8 +262,8 @@ declare global {
        *  // new message is displayed
        *  cy.contains('Hello There').should('be.visible')
        */
-      vue: Vue
-      vueWrapper: Wrapper<Vue>
+      vue: ComponentPublicInstance
+      vueWrapper: VueWrapper<any>
     }
   }
 }
@@ -327,7 +296,7 @@ function failTestOnVueError (err, vm, info) {
  *  })
  */
 export const mount = (
-  component: VueComponent,
+  component: DefineComponent,
   optionsOrProps: MountOptionsArgument = {},
 ) => {
   checkMountModeEnabled()
@@ -346,22 +315,13 @@ export const mount = (
     log: false,
   })
   .then((win) => {
-    const localVue = createLocalVue()
-
-    // @ts-ignore
-    win.Vue = localVue
-    localVue.config.errorHandler = failTestOnVueError
-
-    // set global Vue instance:
     // 1. convenience for debugging in DevTools
     // 2. some libraries might check for this global
-    // appIframe.contentWindow.Vue = localVue
 
-    // refresh inner Vue instance of Vuex store
     // @ts-ignore
     if (hasStore(component)) {
-      // @ts-ignore
-      component.store = resetStoreVM(localVue, component)
+      // TODO: Figure out how to reset Vue 3/Vuex 4 store.
+      // component.store = resetStoreVM(localVue, component)
     }
 
     // @ts-ignore
@@ -405,19 +365,17 @@ export const mount = (
 
     el.append(componentNode)
 
-    // setup Vue instance
-    installFilters(localVue, options)
-    installMixins(localVue, options)
-    // @ts-ignore
-    installPlugins(localVue, options, props)
-    registerGlobalComponents(localVue, options)
-
     // @ts-ignore
     props.attachTo = componentNode
 
-    const wrapper = localVue.extend(component as any)
-
-    const VTUWrapper = testUtilsMount(wrapper, { localVue, ...props })
+    const VTUWrapper = testUtilsMount(component, {
+      global: {
+        components: globalComponents(options),
+        mixins: mixins(options),
+        plugins: plugins(options),
+      },
+      ...props,
+    })
 
     Cypress.vue = VTUWrapper.vm
     Cypress.vueWrapper = VTUWrapper
@@ -431,7 +389,7 @@ export const mount = (
  *  beforeEach(mountVue(component, options))
  */
 export const mountCallback = (
-  component: VueComponent,
+  component: DefineComponent,
   options?: MountOptionsArgument,
 ) => {
   return () => mount(component, options)

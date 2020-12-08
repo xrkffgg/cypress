@@ -1,7 +1,7 @@
 // A basic webpack configuration
 // The default for running tests in this project
 // https://vue-loader.vuejs.org/guide/#manual-setup
-const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const { VueLoaderPlugin } = require('vue-loader')
 const path = require('path')
 
 module.exports = {
@@ -22,14 +22,14 @@ module.exports = {
       // AND `<style>` blocks in `.vue` files
       {
         test: /\.css$/,
-        use: ['vue-style-loader', 'css-loader'],
+        use: ['style-loader', 'css-loader'],
       },
       // https://github.com/intlify/vue-i18n-loader
-      {
-        resourceQuery: /blockType=i18n/,
-        type: 'javascript/auto',
-        loader: '@intlify/vue-i18n-loader',
-      },
+      // {
+      //   resourceQuery: /blockType=i18n/,
+      //   type: 'javascript/auto',
+      //   loader: '@intlify/vue-i18n-loader',
+      // },
     ],
   },
   plugins: [
