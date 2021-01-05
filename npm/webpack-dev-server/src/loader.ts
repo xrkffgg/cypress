@@ -47,17 +47,19 @@ function buildSpecs (projectRoot: string, files: Cypress.Cypress['spec'][] = [])
 
 // Runs the tests inside the iframe
 export default function loader () {
-  const { files, projectRoot } = this._cypress as { files: Cypress.Cypress['spec'][], projectRoot: string }
+  const { files, projectRoot, support } = this._cypress as { files: Cypress.Cypress['spec'][], projectRoot: string, support: string | undefined }
 
   return `
   var allTheSpecs = ${buildSpecs(projectRoot, files)};
-
+  
   const { init } = require(${JSON.stringify(require.resolve('./aut-runner'))})
+  
+  ${support ? `import(${JSON.stringify(support)})` : ''}
 
   const { restartRunner } = init(Object.keys(allTheSpecs)
     .filter(key => allTheSpecs[key].shouldLoad())
-    .map(a => allTheSpecs[a].load())
-  )
+    .map(key => allTheSpecs[key].load())
+    ${support && support.length ? `, () => require(${JSON.stringify(support)})` : ''})
 
   if (module.hot) {
     restartRunner()

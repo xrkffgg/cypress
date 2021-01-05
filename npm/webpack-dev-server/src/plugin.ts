@@ -1,3 +1,6 @@
+/* global Cypress */
+/// <reference types="cypress" />
+
 import webpack, { Compiler, compilation, Plugin } from 'webpack'
 import { EventEmitter } from 'events'
 import _ from 'lodash'
@@ -8,9 +11,10 @@ import path from 'path'
 type UtimesSync = (path: PathLike, atime: string | number | Date, mtime: string | number | Date) => void
 
 interface CypressOptions {
-  files: any[]
+  files: Cypress.Cypress['spec'][]
   projectRoot: string
   devServerEvents?: EventEmitter
+  support: string
 }
 
 interface CypressCTWebpackContext extends compilation.Compilation {
@@ -18,20 +22,23 @@ interface CypressCTWebpackContext extends compilation.Compilation {
 }
 
 export default class CypressCTOptionsPlugin implements Plugin {
-  private files: string[] = []
+  private files: Cypress.Cypress['spec'][] = []
   private readonly projectRoot: string
   private readonly devServerEvents: EventEmitter
+  private support: string
 
   constructor (options: CypressOptions) {
     this.files = options.files
     this.projectRoot = options.projectRoot
     this.devServerEvents = options.devServerEvents
+    this.support = options.support
   }
 
   private pluginFunc = (context: CypressCTWebpackContext, module: compilation.Module) => {
     context._cypress = {
       files: this.files,
       projectRoot: this.projectRoot,
+      support: this.support,
     }
   };
 

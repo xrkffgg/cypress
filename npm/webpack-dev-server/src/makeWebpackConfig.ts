@@ -6,14 +6,14 @@ import CypressCTOptionsPlugin from './plugin'
 const debug = debugFn('cypress:webpack-dev-server:makeWebpackConfig')
 
 export async function makeWebpackConfig (userWebpackConfig = {}, { projectRoot, files, support, devServerEvents }) {
-  debug(`User passed in webpack config with values`, userWebpackConfig)
+  //debug(`User passed in webpack config with values`, userWebpackConfig)
 
   const defaultWebpackConfig = require('./webpack.config')
 
   debug(`Merging Evergreen's webpack config with users'`)
 
-  debug(`New webpack entries`, files)
-  debug(`Project root`, projectRoot)
+  //debug(`New webpack entries`, files)
+  //debug(`Project root`, projectRoot)
   debug(`Support files`, support)
 
   const entry = path.resolve(__dirname, './browser.js')
@@ -24,6 +24,7 @@ export async function makeWebpackConfig (userWebpackConfig = {}, { projectRoot, 
         files,
         projectRoot,
         devServerEvents,
+        support,
       }),
     ],
   }

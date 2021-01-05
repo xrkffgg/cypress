@@ -14,10 +14,12 @@ export async function start (initialWebpackConfig, { specs, config, devServerEve
     initialWebpackConfig = fw.getWebpackOptions()
   }
 
+  debug('config keys', Object.keys(config))
+
   const webpackConfig = await makeWebpackConfig(initialWebpackConfig, {
     files: specs,
     projectRoot: config.projectRoot,
-    support: '',
+    support: config.supportFile,
     devServerEvents,
   })
 
@@ -27,5 +29,5 @@ export async function start (initialWebpackConfig, { specs, config, devServerEve
 
   debug('starting webpack dev server')
 
-  return new WebpackDevServer(compiler, { hot: true })
+  return new WebpackDevServer(compiler, { hot: false, noInfo: true })
 }

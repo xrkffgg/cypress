@@ -1,4 +1,4 @@
-/*eslint-env browser,mocha*/
+/* eslint-env browser,mocha */
 
 function appendTargetIfNotExists (id: string, tag = 'div', parent = document.body) {
   let node = document.getElementById(id)
@@ -14,12 +14,14 @@ function appendTargetIfNotExists (id: string, tag = 'div', parent = document.bod
   return node
 }
 
-export function init (importPromises, parent = (window.opener || window.parent)) {
+export function init (importPromises, initSupport = () => {}, parent = (window.opener || window.parent)) {
   const Cypress = (window as any).Cypress = parent.Cypress
 
   if (!Cypress) {
     throw new Error('Tests cannot run without a reference to Cypress!')
   }
+
+  initSupport()
 
   Cypress.onSpecWindow(window, importPromises)
 
